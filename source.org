@@ -196,7 +196,7 @@
   package, which is a scratch area you can safely tinker in without
   wrecking the whole environment[fn:1].
 
-  For the Hello World program, it should be in its own package[fn:3], which
+  For the Hello World program, it should be in its own package[fn:2], which
   I’ve creatively called =HELLO=.
 
   #+NAME: packages
@@ -228,7 +228,7 @@
 
   The entirety of the Common Lisp API exists inside the =COMMON-LISP=
   package, and none of those symbols are visible unless you say you
-  want them[fn:4], so you’ll want this in every =DEFPACKAGE=.  This
+  want them[fn:3], so you’ll want this in every =DEFPACKAGE=.  This
   isn’t needed in the REPL, because the =COMMON-LISP-USER= package
   uses =COMMON-LISP=.
 
@@ -237,14 +237,14 @@
   should be visible to other packages.  Your package can contain
   non-exported symbols which it uses internally, but the exported
   symbols make up its API, similar to =public= / =private= in C++ or
-  Java[fn:5].
+  Java[fn:4].
 
   You may note that I’ve written the name of the package as =HELLO=,
   which it is, but it’s in the code as =:hello=.  For a deeper
   explanation on why this is the case, I recommend [[http://www.gigamonkeys.com/book/programming-in-the-large-packages-and-symbols.html][the chapter on
   Packages and Symbols]] from [[http://www.gigamonkeys.com/book/][Programming in the Large]].  In the mean
   time, you’ll just have to trust that it’s right and I know what I’m
-  doing[fn:6].
+  doing[fn:5].
 
 
 * Tying it all together
@@ -286,11 +286,11 @@
 
   The [[http://clhs.lisp.se/Body/f_load.htm][=LOAD=]] function does what you’d expect, it loads the contents of
   =hello.lisp= into the Lisp environment.  The second call,
-  =SB-EXT:SAVE-LISP-AND-DIE=[fn:7] is what dumps the image[fn:8].
+  =SB-EXT:SAVE-LISP-AND-DIE=[fn:6] is what dumps the image[fn:7].
 
   For this toy example, this *could* be put at the end of
   =hello.lisp=, but in a larger project, this is a poor separation of
-  concerns[fn:9].  It should go into =build.lisp= instead[fn:10].
+  concerns[fn:8].  It should go into =build.lisp= instead[fn:9].
 
   Executing the build script with =sbcl(1)= will produce the binary:
 
@@ -755,7 +755,6 @@
   - [[https://www.cliki.net/CL-Launch][CL-Launch]] is a wrapper to ease running CL from the shell.  It can
     produce binaries, but is more suited to simple one-file programs.
 
-
 * Footnotes
 
 [fn:1] It is *absolutely* possible to wreck the Lisp environment if
@@ -768,32 +767,30 @@ eval:
 #+END_SRC
 
 It will remove the function binding from the =DEFUN= symbol, with the
-upshot that you can’t define new functions[fn:2].  Oops.
+upshot that you can’t define new functions.  Oops.
 
-[fn:2] Well, can’t easily.
-
-[fn:3] It doesn’t *have* to be in its own package, but if you’re
+[fn:2] It doesn’t *have* to be in its own package, but if you’re
 working on a real program, you’ll want it to be.
 
-[fn:4] It’s possible to create a package which doesn’t use symbols
+[fn:3] It’s possible to create a package which doesn’t use symbols
 from =COMMON-LISP=, but you won’t get much done, since you have no way
 to define functions, set variables, or build lists.
 
-[fn:5] It’s possible to use non-exported symbols, of course, but I’m
+[fn:4] It’s possible to use non-exported symbols, of course, but I’m
 not going to explain how, because it’s bad practice.
 
-[fn:6] I have absolutely no idea what I’m doing.
+[fn:5] I have absolutely no idea what I’m doing.
 
-[fn:7] The =SB-EXT= prefix indicates that this is a SBCL extension,
+[fn:6] The =SB-EXT= prefix indicates that this is a SBCL extension,
 rather than part of [[https://www.cs.cmu.edu/Groups/AI/util/html/cltl/cltl2.html][the Lisp language specification]].
 
-[fn:8] The =SB-EXT:= prefix specifies the package the function lives
+[fn:7] The =SB-EXT:= prefix specifies the package the function lives
 in.  =SB-EXT= is a package which contains SBCL-specific extensions
 which aren’t part of the Common Lisp language specification.
 
-[fn:9] If =SAVE-LISP-AND-DIE= was in =hello.lisp=, and that file was
+[fn:8] If =SAVE-LISP-AND-DIE= was in =hello.lisp=, and that file was
 loaded into any Lisp environment, it would immediately terminate,
 which is unacceptably antisocial behavior.
 
-[fn:10] There are other approaches to this problem, but this is the
+[fn:9] There are other approaches to this problem, but this is the
 one I’m sticking with.
