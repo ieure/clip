@@ -1,0 +1,799 @@
+#+AUTHOR: Ian Eure <ian@retrospec.tv>
+#+TITLE: Common Lisp in Practice
+#+OPTIONS: num:nil p:nil
+
+* Introduction
+
+  One of the things which has kept Common Lisp out of my day-to-day
+  toolbox is a lack of clear instructions how to get up and running
+  with it — not in the REPL, but building programs that can be called
+  from the shell.  I tend to reach for Python or Emacs Lisp for a lot
+  of these cases, since they’re readily available and I understand
+  them, but I’ve always felt that Common Lisp could be a potent tool
+  for these situations.
+
+  After reading my friend Steve’s [[http://stevelosh.com/blog/2018/08/a-road-to-common-lisp/][Road to Common Lisp]], I was inspired
+  to figure this out.  With some patient help from him, I believe I’ve
+  finally got a handle on it.
+
+  Building a project in Lisp can be confusing, because Lisp itself
+  works so differently to other languages, and this affects how builds
+  work.  While Lisp is compiled to machine code like many languages,
+  the mechanisms are somewhat different.
+
+* Goals
+
+  This isn’t a tutorial on Lisp programming, because there are many
+  great resources for that already.  It doesn’t rathole on every
+  possible approach or permutation you could possibly use, but tries
+  to tread and illuminate the beaten path.  It’s an attempt to explain
+  the non-obvious nuts-and-bolts of building Common Lisp programs:
+  Where to put your source code, how to make a binary, and how to use
+  libraries.
+
+  If you’d like to run the example code, you’ll need to install [[http://www.sbcl.org/][Steel
+  Bank Common Lisp (SBCL)]] and [[https://www.quicklisp.org/][Quicklisp]].  The Quicklisp installation
+  is somewhat strange if you’re coming from other languages, so it’s
+  also fine to read along and see what things are like before
+  investing in a Lisp environment.
+
+  I wrote this in a [[https://en.wikipedia.org/wiki/Literate_programming][literate programming]] style using [[https://orgmode.org/manual/Working-with-source-code.html#Working-with-source-code][org-babel]].  All
+  program output should be very, very close to what you’d see if you
+  ran those programs.  The [[https://github.com/ieure/clip/blob/source/source.org][original Org document]] and [[https://github.com/ieure/cl-hello/tree/output/][source code
+  extracted from it]] are available in [[https://github.com/ieure/clip/tree/master][my Clip GitHub repo]].
+
+
+* Background: Lisp environments & images
+
+  A typical compiler forks a new OS process for each file, producing a
+  binary artifact corresponding to its input, then combining those
+  into a final binary which you can run.
+
+  Common Lisp is much more comprehensive and tightly integrated than
+  other languages.  Rather than separate binaries for compiling,
+  linking, and debugging, these features are built into the language
+  itself and can be used by any Lisp programs, including yours.
+
+  When you start Common Lisp, it initializes a *Lisp environment* in
+  your computer’s memory, then evaluates a *toplevel function*.  The
+  environment contains the Lisp language and tools; the standard
+  toplevel is the REPL.  If you type code into the REPL, or load code
+  from a file, it’s added to the environment and can be used by
+  anything else inside it.
+
+  This is an important point to understand.  Nearly every other
+  language is either unusable without multiple binaries which do
+  different things, or ships with a significant amount of
+  functionality locked up in programs which have to be run from a
+  shell.
+
+  For example, Python 3 ships with five binaries:
+
+  #+BEGIN_SRC shell :exports both
+  dpkg -L python3-minimal | grep -c /bin/
+  #+END_SRC
+
+  #+RESULTS:
+  : 5
+
+  OpenJDK has 21:
+
+  #+BEGIN_SRC shell :exports both
+  dpkg -L openjdk-8-jre-headless | grep -c /bin/
+  #+END_SRC
+
+  #+RESULTS:
+  : 21
+
+  GCC has 16:
+  #+BEGIN_SRC shell :exports both
+  dpkg -L gcc | grep -c /bin/
+  #+END_SRC
+
+  #+RESULTS:
+  : 16
+
+  And in order to actually use GCC, you need binutils, which has
+  nearly 40 more:
+
+  #+BEGIN_SRC shell :exports both
+  dpkg -L binutils | grep -c /bin/
+  #+END_SRC
+
+  #+RESULTS:
+  : 37
+
+  Can you guess how many Steel Bank Common Lisp (SBCL) has?
+
+  #+BEGIN_SRC shell :exports both
+  dpkg -L sbcl | grep -c /bin/
+  #+END_SRC
+
+  #+RESULTS:
+  : 1
+
+  Just one, =/usr/bin/sbcl=.  Nearly everything you can do with SBCL, you
+  do inside its environment, and the remaining handful are options and
+  arguments passed to =sbcl(1)=.
+
+  Secondly, the environment can be saved to disk in a *Lisp image* (or
+  "core"), then restored from it at a later date.  When you save the
+  image, you can specify a toplevel function other than the REPL which
+  should be evaluated.
+
+  To make an executable program which you can run from a UNIX shell,
+  you load your code into the Lisp environment, then create an image
+  with the toplevel set to your entry point.
+
+
+* Version 1: Quick & dirty
+
+  The goal is to make a traditional "Hello, World" program which will:
+
+  1. Run from a shell.
+  2. Use the first argument given to it as the name of the person or
+     thing to greet.
+
+  Starting from the ground up, a function to create the greeting is
+  needed:
+
+  #+NAME: greet
+  #+BEGIN_SRC lisp :tangle no :exports code
+    (defun greet (whom)
+      "Create a greeting message for WHOM."
+      (format nil "Hello, ~A." whom))
+  #+END_SRC
+
+  #+RESULTS: greet
+  : GREET
+
+  Trying this in the REPL shows that it works:
+
+  #+BEGIN_SRC lisp :tangle no :exports both :results value verbatim
+  (greet "World")
+  #+END_SRC
+
+  #+RESULTS:
+  : "Hello, World."
+
+
+* The toplevel function
+
+  Satisfying the first requirement, running from the shell, means a
+  toplevel function is needed — this will be evaluated when the image is
+  restored.
+
+  I named the toplevel function =MAIN=, but it can be called anything.
+  The toplevel function is explicitly specified when the image is
+  dumped.  Any function which accepts zero arguments can be used as a
+  toplevel.
+
+  #+NAME: main
+  #+BEGIN_SRC lisp :exports code
+    (defun main ()
+      "Greet someone, or something."
+      (write-line (greet (car (uiop:command-line-arguments))))
+
+      (uiop:quit))
+  #+END_SRC
+
+  There are two functions in here that may be new to you,
+  =UIOP:COMMAND-LINE-ARGUMENTS= and =UIOP:QUIT=.  These are part of
+  ASDF, which we’ll cover in a bit, and provide a portable interface
+  to Lisp-implementation-specific behavior.  They pretty much do what they say on
+  the tin: =COMMAND-LINE-ARGUMENTS= evaluates to a list of arguments
+  given to the Lisp image, with each list element containing a single
+  argument; and =QUIT= terminates the process.
+
+
+* Packages
+
+  The next piece to get a handle on is packages.  Packages are
+  containers for symbols — things like =MAIN= and =GREET= which were
+  defined earlier.
+
+  When the Lisp REPL starts, it plops you into the =COMMON-LISP-USER=
+  package, which is a scratch area you can safely tinker in without
+  wrecking the whole environment[fn:1].
+
+  For the Hello World program, it should be in its own package[fn:3], which
+  I’ve creatively called =HELLO=.
+
+  #+NAME: packages
+  #+BEGIN_SRC lisp :tangle no :exports code
+    (defpackage :hello                      ; Define a package and name it HELLO
+      (:use :common-lisp)                   ; The package needs Common Lisp
+      (:export :greet :main))               ; This package has two public
+                                            ; symbols, GREET and MAIN.
+  #+END_SRC
+
+  This is a little weird, because the whole declaration is a forward
+  reference.  The package has to be defined with =DEFPACKAGE= before
+  it can be made active with =IN-PACKAGE=.  Because =DEFPACKAGE= lists
+  the symbols to export, those have to appear before they’re defined.
+
+  The =:USE= form, tells Common Lisp that symbols from the
+  =COMMON-LISP= package should be made visible inside your package.
+  The form expects a list, so if you need multiple things, you’d do:
+
+  #+BEGIN_SRC lisp
+    (:use :common-lisp :foo :bar)
+  #+END_SRC
+
+  This has nothing to do with *loading* those packages — they have to
+  be loaded already, or you’ll get an error.  This can be surprising
+  for those used to other languages, since many treat loading and
+  making visible in the current file or namespace as a single
+  operation.
+
+  The entirety of the Common Lisp API exists inside the =COMMON-LISP=
+  package, and none of those symbols are visible unless you say you
+  want them[fn:4], so you’ll want this in every =DEFPACKAGE=.  This
+  isn’t needed in the REPL, because the =COMMON-LISP-USER= package
+  uses =COMMON-LISP=.
+
+
+  The =:EXPORT= argument enumerates the symbols of your package which
+  should be visible to other packages.  Your package can contain
+  non-exported symbols which it uses internally, but the exported
+  symbols make up its API, similar to =public= / =private= in C++ or
+  Java[fn:5].
+
+  You may note that I’ve written the name of the package as =HELLO=,
+  which it is, but it’s in the code as =:hello=.  For a deeper
+  explanation on why this is the case, I recommend [[http://www.gigamonkeys.com/book/programming-in-the-large-packages-and-symbols.html][the chapter on
+  Packages and Symbols]] from [[http://www.gigamonkeys.com/book/][Programming in the Large]].  In the mean
+  time, you’ll just have to trust that it’s right and I know what I’m
+  doing[fn:6].
+
+
+* Tying it all together
+
+  The complete source for Hello World now looks like:
+
+  #+NAME: hello
+  #+BEGIN_SRC lisp :tangle v1/hello.lisp :mkdirp yes :noweb yes :exports code
+    <<packages>>
+
+
+    (in-package :hello)                     ; DEFPACKAGE only defines the
+                                            ; package, it doesn't make it
+                                            ; active.
+
+    <<greet>>
+
+    <<main>>
+  #+END_SRC
+
+
+* Building an image
+
+  Because the Common Lisp toolchain exists inside the Lisp
+  environment, build scripts for Common Lisp project are written in, you
+  guessed it, Lisp.
+
+  #+NAME: build
+  #+BEGIN_SRC lisp :tangle v1/build.lisp :exports code
+    (load "hello.lisp")                     ; Load the code into the Lisp
+                                            ; environment
+
+    (sb-ext:save-lisp-and-die "hello"       ; Save a Lisp image
+     :toplevel 'hello:main                  ; The toplevel function is
+                                            ; MAIN, inside the HELLO
+                                            ; package.
+     :executable t)                         ; Make an executable.
+  #+END_SRC
+
+  The [[http://clhs.lisp.se/Body/f_load.htm][=LOAD=]] function does what you’d expect, it loads the contents of
+  =hello.lisp= into the Lisp environment.  The second call,
+  =SB-EXT:SAVE-LISP-AND-DIE=[fn:7] is what dumps the image[fn:8].
+
+  For this toy example, this *could* be put at the end of
+  =hello.lisp=, but in a larger project, this is a poor separation of
+  concerns[fn:9].  It should go into =build.lisp= instead[fn:10].
+
+  Executing the build script with =sbcl(1)= will produce the binary:
+
+  #+NAME: build
+  #+BEGIN_SRC shell :dir v1 :results value verbatim :exports both
+    sbcl --non-interactive --load build.lisp
+  #+END_SRC
+
+  #+RESULTS:
+  #+begin_example
+  This is SBCL 1.3.14.debian, an implementation of ANSI Common Lisp.
+  More information about SBCL is available at <http://www.sbcl.org/>.
+
+  SBCL is free software, provided as is, with absolutely no warranty.
+  It is mostly in the public domain; some portions are provided under
+  BSD-style licenses.  See the CREDITS and COPYING files in the
+  distribution for more information.
+  [undoing binding stack and other enclosing state... done]
+  [defragmenting immobile space... done]
+  [saving current Lisp image into hello:
+  writing 4800 bytes from the read-only space at 0x20000000
+  writing 3216 bytes from the static space at 0x20100000
+  writing 1245184 bytes from the immobile space at 0x20300000
+  writing 13796160 bytes from the immobile space at 0x21b00000
+  writing 37584896 bytes from the dynamic space at 0x1000000000
+  done]
+#+end_example
+
+  Running it shows the message:
+
+  #+NAME: run-hello-world
+  #+BEGIN_SRC shell :dir v1 :exports both :results value verbatim
+    ./hello World
+  #+END_SRC
+
+  #+RESULTS:
+  : "Hello, World."
+
+  Passing in the name of the current user also works:
+
+  #+BEGIN_SRC shell :dir v1 :exports both :results value verbatim
+    ./hello $(whoami)
+  #+END_SRC
+
+  #+RESULTS:
+  : "Hello, ieure."
+
+  Now that the program works, and you hopefully understand why and
+  how, it’s time to tear it down and rebuild it.  Several times.
+
+
+* Version 2: Structure
+
+  Having all the code in one file is fine for a toy, but larger
+  programs benefit from more organization.  If the core functionality
+  is split from the CLI, other Lisp projects can reuse the greeting
+  function without the CLI code.  Having the packages definition out
+  of the way is a good idea, since as a project grows, it can get
+  unwieldy.  Since all this work will produce multiple source files,
+  the code making up the main functionality ought to be separated from
+  that used to build the system.
+
+  What this should look like is:
+
+  - =build.lisp=
+  - =packages.lisp=
+    - =src/=
+      - =greet.lisp=
+      - =main.lisp=
+
+  Even though the organization is different, the contents of the files
+  are almost exactly the same.
+
+  =build.lisp=
+  #+BEGIN_SRC lisp :tangle v2/build.lisp :mkdirp yes
+    (load "packages.lisp")                  ; Load package definition
+    (load "src/greet.lisp")                 ; Load the core
+    (load "src/main.lisp")                  ; Load the toplevel
+
+    ;; Unchanged from v1
+    (sb-ext:save-lisp-and-die "hello"
+     :toplevel 'hello:main
+     :executable t)
+  #+END_SRC
+
+  =src/greet.lisp=
+  #+NAME: v2-greet
+  #+BEGIN_SRC lisp :tangle v2/src/greet.lisp :mkdirp yes :noweb yes
+    (in-package :hello)                     ; We have to tell Lisp what
+                                            ; package this is in now.
+
+    ;; Unchanged from v1
+    <<greet>>
+  #+END_SRC
+
+  =src/main.lisp=
+  #+NAME: v2-main
+  #+BEGIN_SRC lisp :tangle v2/src/main.lisp :noweb yes
+  (in-package :hello)
+
+  ;; Unchanged from v1
+  <<main>>
+  #+END_SRC
+
+  The rest of the files are unchanged from v1.
+
+  #+BEGIN_SRC lisp :tangle v2/packages.lisp :noweb yes :export none
+    <<packages>>
+  #+END_SRC
+
+  Building and running works the same way:
+
+  #+BEGIN_SRC shell :dir v2 :results value verbatim :export both
+    sbcl --non-interactive --load build.lisp
+    ./hello World
+  #+END_SRC
+
+  #+RESULTS:
+  #+begin_example
+  This is SBCL 1.3.14.debian, an implementation of ANSI Common Lisp.
+  More information about SBCL is available at <http://www.sbcl.org/>.
+
+  SBCL is free software, provided as is, with absolutely no warranty.
+  It is mostly in the public domain; some portions are provided under
+  BSD-style licenses.  See the CREDITS and COPYING files in the
+  distribution for more information.
+  [undoing binding stack and other enclosing state... done]
+  [defragmenting immobile space... done]
+  [saving current Lisp image into hello:
+  writing 4800 bytes from the read-only space at 0x20000000
+  writing 3216 bytes from the static space at 0x20100000
+  writing 1245184 bytes from the immobile space at 0x20300000
+  writing 13796160 bytes from the immobile space at 0x21b00000
+  writing 37584896 bytes from the dynamic space at 0x1000000000
+  done]
+  "Hello, World."
+#+end_example
+
+
+* Version 3: Systems
+
+  The next yak in this recursive shave is *systems*.  Packages [[https://www.cs.cmu.edu/Groups/AI/util/html/cltl/clm/node111.html#XPACK][are
+  part of the Lisp language specification]], but systems are provided by
+  a library.  There have been several approaches to defining systems,
+  but the dominant one at the time of writing id [[https://common-lisp.net/project/asdf/][ASDF]], which means
+  "Another System Definition Facility."  ASDF is included in the
+  =contrib/= directory of SBCL, and well-behaved SBCL packages should
+  include it for you.  If not, Quicklisp bundles a version, so between
+  the two you ought to have a usable ASDF.
+
+  Systems and packages are orthogonal, but it can be confusing,
+  because they both deal with some of the same parts of the project.
+
+  A package is *a way of organizing the symbols of your project inside
+  the Lisp environment*.  The contents of one package can be split
+  between multiple files, or a single file can contain multiple
+  packages.  From the Lisp environment perspective, the only important
+  thing is that certain things live in certain packages.
+
+  A system is *a description of how to load your project into the
+  environment*.  Because of Lisp’s flexibility organizing packages,
+  you need a system to load the pieces in the right order.  In our
+  example, if you try to load =greet.lisp= before =packages.lisp=, it
+  will break, because the =HELLO= package hasn’t been defined.  Or if
+  you load =main.lisp= and not =greet.lisp=, it will break because the
+  =GREET= function isn’t defined, even though they’re in the same
+  package.
+
+  Further complicating things, *one project can have multiple
+  systems*.  If you write unit tests, you’ll want a system for that,
+  because you need to load different things (your test code, the test
+  framework) in a different order (your test code, the test
+  framework).  Putting this in a different system means that anyone
+  using your library doesn’t drag the test framework along with it.
+
+* Defining the system
+
+  Starting from the ground up again, this is the system which defines
+  the main =HELLO=, which contains the package definition and =GREET=.
+
+  #+NAME: defsystem-hello
+  #+BEGIN_SRC lisp
+    (defsystem :hello                       ; The system will be named
+                                            ; HELLO, same as the project
+      :serial t                             ; Load components in the same
+                                            ; order they're defined.
+      :components ((:file "packages")
+                   (:module "src" ; A module is a collection of pieces of
+                                  ; your program
+                    :components ((:file "greet"))))) ; Load the greet
+                                                     ; function from
+                                                     ; greet.lisp. The
+                                                     ; file extension is
+                                                     ; implied, and must
+                                                     ; not appear here.
+  #+END_SRC
+
+  And now a secondary system for the binary:
+
+  #+NAME: defsystem-main
+  #+BEGIN_SRC lisp
+    (defsystem :hello/bin       ; The name HELLO/BIN indicates that this
+                                ; is a secondary system of system HELLO.
+      :depends-on (:hello)      ; This system needs the core HELLO system.
+      :components ((:module :src
+                    :components ((:file "main"))))) ; ...and includes one
+                                                    ; additional file.
+  #+END_SRC
+
+  The whole thing should look like:
+
+  #+BEGIN_SRC lisp :tangle v3/hello.asd :noweb yes :mkdirp yes
+    <<defsystem-hello>>
+
+    <<defsystem-main>>
+  #+END_SRC
+
+  In the build script, ASDF’s loader can be used instead of loading
+  the pieces manually:
+
+  #+NAME: build-v3
+  #+BEGIN_SRC lisp :tangle v3/build.lisp
+    (asdf:load-system :hello/bin)
+
+    (sb-ext:save-lisp-and-die "hello"
+     :toplevel 'hello:main
+     :executable t)
+
+  #+END_SRC
+
+  ASDF must be told where to find this system definition, and all
+  others it should be able to load.  This is [[https://common-lisp.net/project/asdf/asdf.html#Configuring-ASDF-to-find-your-systems][a complex topic]], but the
+  simplest approach is:
+
+  1. Use Quicklisp.
+  2. Make a symlink from [[http://blog.quicklisp.org/2018/01/the-quicklisp-local-projects-mechanism.html][Quicklisp’s =local-projects=]] directory, named
+     after your project, which points to your source tree.
+
+  This is easily the grossest thing about this entire setup.
+
+  #+BEGIN_SRC shell
+    ln -sf $PWD/v3 ~/quicklisp/local-projects/hello
+  #+END_SRC
+
+  The rest of the source is unchanged from v2.
+
+  #+BEGIN_SRC lisp :tangle v3/packages.lisp :noweb yes :export no
+    <<packages>>
+  #+END_SRC
+
+  #+BEGIN_SRC lisp :tangle v3/src/greet.lisp :noweb yes :mkdirp yes :export no
+    <<v2-greet>>
+  #+END_SRC
+
+  #+BEGIN_SRC lisp :tangle v3/src/main.lisp :noweb yes :export no
+    <<v2-main>>
+  #+END_SRC
+
+  Running works the same way:
+
+  #+BEGIN_SRC shell :dir v3 :results value verbatim :export both
+    sbcl --non-interactive --load build.lisp
+    ./hello World
+  #+END_SRC
+
+  #+RESULTS:
+  #+begin_example
+  This is SBCL 1.3.14.debian, an implementation of ANSI Common Lisp.
+  More information about SBCL is available at <http://www.sbcl.org/>.
+
+  SBCL is free software, provided as is, with absolutely no warranty.
+  It is mostly in the public domain; some portions are provided under
+  BSD-style licenses.  See the CREDITS and COPYING files in the
+  distribution for more information.
+  ; compiling file "/home/ieure/Dropbox/Projects/cl/hello/lit/v3/packages.lisp" (written 30 AUG 2018 09:03:51 AM):
+  ; compiling (DEFPACKAGE :HELLO ...)
+  ; compiling (IN-PACKAGE :HELLO)
+
+  ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/hello/lit/v3/packages-tmpGHU3ALSV.fasl written
+  ; compilation finished in 0:00:00.002
+  ; compiling file "/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/greet.lisp" (written 30 AUG 2018 09:03:51 AM):
+  ; compiling (IN-PACKAGE :HELLO)
+  ; compiling (DEFUN GREET ...)
+
+  ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/greet-tmpAAURSO1.fasl written
+  ; compilation finished in 0:00:00.003
+  ; compiling file "/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/main.lisp" (written 30 AUG 2018 09:03:51 AM):
+  ; compiling (IN-PACKAGE :HELLO)
+  ; compiling (DEFUN MAIN ...)
+
+  ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/main-tmp5GEXGEG5.fasl written
+  ; compilation finished in 0:00:00.001
+  [undoing binding stack and other enclosing state... done]
+  [defragmenting immobile space... done]
+  [saving current Lisp image into hello:
+  writing 4800 bytes from the read-only space at 0x20000000
+  writing 3216 bytes from the static space at 0x20100000
+  writing 1253376 bytes from the immobile space at 0x20300000
+  writing 13796832 bytes from the immobile space at 0x21b00000
+  writing 37715968 bytes from the dynamic space at 0x1000000000
+  done]
+  "Hello, World."
+#+end_example
+
+* V4: Using libraries
+
+  The final step is to replace UIOP’s basic program arguments with a
+  more full-featured library, [[https://github.com/libre-man/unix-opts][unix-opts.]]
+
+  Common Lisp libraries are installed via Quicklisp, and loaded with
+  ASDF.  As with other Common Lisp tasks, actually installing the
+  library is done from the REPL.
+
+** Quicklisp
+
+   Quicklisp is not a package manager, in the sense of those systems in
+   other languages.  There’s no project-specific setup, like with
+   virtualenv or rbenv.  There’s no =node_modules=.
+
+   Quicklisp is more of a caching mechanism, which helpers to configure
+   ASDF to load code from the cache.  Sort of similar to Maven’s
+   =~/.m2= mechanism.  A single copy of the code is stored in
+   =~/.quicklisp=, and can be loaded into a Common Lisp environment
+   with ASDF.
+
+   As with other Common Lisp tooling, the primary interface for
+   Quicklisp is the Lisp environment.
+
+** Installing unix-opts
+
+   The [[https://www.quicklisp.org/beta/][Quicklisp documentation]] discusses this, but I’m going to cover
+   the essentials.
+
+   Searching for available libraries can be done with
+   =ql:system-apropos=:
+   #+BEGIN_SRC lisp :results value verbatim :export both
+     (ql:system-apropos "unix")
+   #+END_SRC
+
+   #+RESULTS:
+
+
+   Installing is done with =ql:quickload=:
+   #+BEGIN_SRC lisp  :results value verbatim :export both
+     (ql:quickload "unix-opts")
+   #+END_SRC
+
+   #+RESULTS:
+   : ("unix-opts")
+
+   And the library can be loaded with =asdf:load-system=:
+   #+BEGIN_SRC lisp
+     (asdf:load-system :unix-opts)
+   #+END_SRC
+
+   #+RESULTS:
+   : T
+
+
+** The new =MAIN=
+
+   The new system definition looks the same as before, except a line
+   has been added to ensure that unix-opts is loaded, and a dependency
+   is added to the =HELLO= system.  If the unix-opts system isn’t
+   loaded, =DEFPACKAGE= can’t find the thing to depend on.
+
+  #+BEGIN_SRC lisp :tangle v4/build.lisp :noweb yes :mkdirp yes :export no
+    <<build-v3>>
+  #+END_SRC
+
+   #+BEGIN_SRC lisp :tangle v4/hello.asd :noweb yes :export no
+     <<defsystem-hello>>
+
+     (defsystem :hello/bin
+       :depends-on (:hello :unix-opts)       ; unix-opts dep added here
+       :components ((:module :src
+                     :components ((:file "main")))))
+
+   #+END_SRC
+
+   #+BEGIN_SRC lisp :tangle v4/packages.lisp :noweb yes :export no
+   <<packages>>
+   #+END_SRC
+
+   #+BEGIN_SRC lisp :tangle v4/src/greet.lisp :mkdirp yes :noweb yes :export no
+   <<v2-greet>>
+   #+END_SRC
+
+   #+BEGIN_SRC lisp :tangle v4/src/main.lisp
+     (in-package :hello)
+
+     (unix-opts:define-opts
+       (:name :help
+        :description "Print this help text"
+        :short #\h
+        :long "help"))
+
+     (defun main ()
+       "Greet someone, or something."
+       (multiple-value-bind (options free-args)
+           (unix-opts:get-opts)
+         (if (or (getf options :help) (/= (length free-args) 1))
+             (unix-opts:describe
+              :prefix "A Hello World program."
+              :args "WHOM")
+             (write-line (greet (car free-args)))))
+
+       (uiop:quit))
+   #+END_SRC
+
+   Before this works, the Quicklisp =local-projects= symlink needs to
+   be updated:
+
+   #+BEGIN_SRC shell :export code
+     ln -sf $PWD/v4 ~/quicklisp/local-projects/hello
+   #+END_SRC
+
+   #+RESULTS:
+
+   ... And the ASDF registry cleared:
+
+   #+BEGIN_SRC lisp :export code
+     (asdf:clear-source-registry)
+   #+END_SRC
+
+   After building (using the same commands as previously), the new
+   options parser is working:
+
+   #+BEGIN_SRC shell :dir v4
+     sbcl --non-interactive --load build.lisp
+   #+END_SRC
+
+   #+BEGIN_SRC shell :dir v4 :results value verbatim :export both
+     ./hello
+   #+END_SRC
+
+   #+RESULTS:
+   : A Hello World program.
+   :
+   : Available options:
+   :   -h, --help               Print this help text
+   :
+
+   #+BEGIN_SRC shell :dir v4 :results value verbatim :export both
+     ./hello $(whoami)
+   #+END_SRC
+
+   #+RESULTS:
+   : Hello, ieure.
+
+* Conclusion
+
+  At over four thousand words, this has been *a lot more* than I set
+  out to write.  The process of learning, organizing, and refining my
+  own understanding has been wonderful.  I hope you’ve been able to
+  take away some of that, and will go forth with useful new tools.
+
+
+* Further reading
+
+  - [[http://stevelosh.com/blog/2018/08/a-road-to-common-lisp/][A Road to Common Lisp]]
+  - [[https://www.cliki.net/CL-Launch][CL-Launch]] is a wrapper to ease running CL from the shell.  It can
+    produce binaries, but is more suited to simple one-file programs.
+
+
+* Footnotes
+
+[fn:1] It is *absolutely* possible to wreck the Lisp environment if
+your’re not careful, so this is a good thing.  For example, if you
+eval:
+
+#+BEGIN_SRC lisp :tangle no
+  (in-package :common-lisp)
+  (fmakunbound 'defun)
+#+END_SRC
+
+It will remove the function binding from the =DEFUN= symbol, with the
+upshot that you can’t define new functions[fn:2].  Oops.
+
+[fn:2] Well, can’t easily.
+
+[fn:3] It doesn’t *have* to be in its own package, but if you’re
+working on a real program, you’ll want it to be.
+
+[fn:4] It’s possible to create a package which doesn’t use symbols
+from =COMMON-LISP=, but you won’t get much done, since you have no way
+to define functions, set variables, or build lists.
+
+[fn:5] It’s possible to use non-exported symbols, of course, but I’m
+not going to explain how, because it’s bad practice.
+
+[fn:6] I have absolutely no idea what I’m doing.
+
+[fn:7] The =SB-EXT= prefix indicates that this is a SBCL extension,
+rather than part of [[https://www.cs.cmu.edu/Groups/AI/util/html/cltl/cltl2.html][the Lisp language specification]].
+
+[fn:8] The =SB-EXT:= prefix specifies the package the function lives
+in.  =SB-EXT= is a package which contains SBCL-specific extensions
+which aren’t part of the Common Lisp language specification.
+
+[fn:9] If =SAVE-LISP-AND-DIE= was in =hello.lisp=, and that file was
+loaded into any Lisp environment, it would immediately terminate,
+which is unacceptably antisocial behavior.
+
+[fn:10] There are other approaches to this problem, but this is the
+one I’m sticking with.
