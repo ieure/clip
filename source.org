@@ -169,13 +169,16 @@
   toplevel.
 
   #+NAME: main
-  #+BEGIN_SRC lisp :exports code
+  #+BEGIN_SRC lisp :exports code :results value verbatim
     (defun main ()
       "Greet someone, or something."
       (write-line (greet (car (uiop:command-line-arguments))))
 
       (uiop:quit))
   #+END_SRC
+
+  #+RESULTS: main
+  : MAIN
 
   There are two functions in here that may be new to you,
   =UIOP:COMMAND-LINE-ARGUMENTS= and =UIOP:QUIT=.  These are part of
@@ -206,6 +209,9 @@
       (:export :greet :main))               ; This package has two public
                                             ; symbols, GREET and MAIN.
   #+END_SRC
+
+  #+RESULTS: packages
+  : #<PACKAGE "HELLO">
 
   This is a little weird, because the whole declaration is a forward
   reference.  The package has to be defined with =DEFPACKAGE= before
@@ -265,6 +271,9 @@
     <<main>>
   #+END_SRC
 
+  #+RESULTS: hello
+  : MAIN
+
 
 * Building an image
 
@@ -299,7 +308,7 @@
     sbcl --non-interactive --load build.lisp
   #+END_SRC
 
-  #+RESULTS:
+  #+RESULTS: build
   #+begin_example
   This is SBCL 1.3.14.debian, an implementation of ANSI Common Lisp.
   More information about SBCL is available at <http://www.sbcl.org/>.
@@ -313,11 +322,11 @@
   [saving current Lisp image into hello:
   writing 4800 bytes from the read-only space at 0x20000000
   writing 3216 bytes from the static space at 0x20100000
-  writing 1245184 bytes from the immobile space at 0x20300000
-  writing 13796160 bytes from the immobile space at 0x21b00000
-  writing 37584896 bytes from the dynamic space at 0x1000000000
+  writing 1179648 bytes from the immobile space at 0x20300000
+  writing 13720752 bytes from the immobile space at 0x21b00000
+  writing 37027840 bytes from the dynamic space at 0x1000000000
   done]
-#+end_example
+  #+end_example
 
   Running it shows the message:
 
@@ -326,8 +335,8 @@
     ./hello World
   #+END_SRC
 
-  #+RESULTS:
-  : "Hello, World."
+  #+RESULTS: run-hello-world
+  : Hello, World.
 
   Passing in the name of the current user also works:
 
@@ -422,12 +431,12 @@
   [saving current Lisp image into hello:
   writing 4800 bytes from the read-only space at 0x20000000
   writing 3216 bytes from the static space at 0x20100000
-  writing 1245184 bytes from the immobile space at 0x20300000
-  writing 13796160 bytes from the immobile space at 0x21b00000
-  writing 37584896 bytes from the dynamic space at 0x1000000000
+  writing 1179648 bytes from the immobile space at 0x20300000
+  writing 13720752 bytes from the immobile space at 0x21b00000
+  writing 37027840 bytes from the dynamic space at 0x1000000000
   done]
-  "Hello, World."
-#+end_example
+  Hello, World.
+  #+end_example
 
 
 * Version 3: Systems
@@ -466,134 +475,136 @@
   framework).  Putting this in a different system means that anyone
   using your library doesn’t drag the test framework along with it.
 
-* Defining the system
+** Defining the system
 
-  Starting from the ground up again, this is the system which defines
-  the main =HELLO=, which contains the package definition and =GREET=.
+   Starting from the ground up again, this is the system which defines
+   the main =HELLO=, which contains the package definition and =GREET=.
 
-  #+NAME: defsystem-hello
-  #+BEGIN_SRC lisp
-    (defsystem :hello                       ; The system will be named
-                                            ; HELLO, same as the project
-      :serial t                             ; Load components in the same
-                                            ; order they're defined.
-      :components ((:file "packages")
-                   (:module "src" ; A module is a collection of pieces of
-                                  ; your program
-                    :components ((:file "greet"))))) ; Load the greet
-                                                     ; function from
-                                                     ; greet.lisp. The
-                                                     ; file extension is
-                                                     ; implied, and must
-                                                     ; not appear here.
-  #+END_SRC
+   #+NAME: defsystem-hello
+   #+BEGIN_SRC lisp
+     (defsystem :hello                       ; The system will be named
+                                             ; HELLO, same as the project
+       :serial t                             ; Load components in the same
+                                             ; order they're defined.
+       :components ((:file "packages")
+                    (:module "src" ; A module is a collection of pieces of
+                                   ; your program
+                     :components ((:file "greet"))))) ; Load the greet
+                                                      ; function from
+                                                      ; greet.lisp. The
+                                                      ; file extension is
+                                                      ; implied, and must
+                                                      ; not appear here.
+   #+END_SRC
 
-  And now a secondary system for the binary:
+   And now a secondary system for the binary:
 
-  #+NAME: defsystem-main
-  #+BEGIN_SRC lisp
-    (defsystem :hello/bin       ; The name HELLO/BIN indicates that this
-                                ; is a secondary system of system HELLO.
-      :depends-on (:hello)      ; This system needs the core HELLO system.
-      :components ((:module :src
-                    :components ((:file "main"))))) ; ...and includes one
-                                                    ; additional file.
-  #+END_SRC
+   #+NAME: defsystem-main
+   #+BEGIN_SRC lisp
+     (defsystem :hello/bin       ; The name HELLO/BIN indicates that this
+                                 ; is a secondary system of system HELLO.
+       :depends-on (:hello)      ; This system needs the core HELLO system.
+       :components ((:module :src
+                     :components ((:file "main"))))) ; ...and includes one
+                                                     ; additional file.
+   #+END_SRC
 
-  The whole thing should look like:
+   The whole thing should look like:
 
-  #+BEGIN_SRC lisp :tangle v3/hello.asd :noweb yes :mkdirp yes
-    <<defsystem-hello>>
+   #+BEGIN_SRC lisp :tangle v3/hello.asd :noweb yes :mkdirp yes
+     <<defsystem-hello>>
 
-    <<defsystem-main>>
-  #+END_SRC
+     <<defsystem-main>>
+   #+END_SRC
 
-  In the build script, ASDF’s loader can be used instead of loading
-  the pieces manually:
+   In the build script, ASDF’s loader can be used instead of loading
+   the pieces manually:
 
-  #+NAME: build-v3
-  #+BEGIN_SRC lisp :tangle v3/build.lisp
-    (asdf:load-system :hello/bin)
+   #+NAME: build-v3
+   #+BEGIN_SRC lisp :tangle v3/build.lisp
+     (asdf:load-system :hello/bin)
 
-    (sb-ext:save-lisp-and-die "hello"
-     :toplevel 'hello:main
-     :executable t)
+     (sb-ext:save-lisp-and-die "hello"
+      :toplevel 'hello:main
+      :executable t)
+   #+END_SRC
 
-  #+END_SRC
+   ASDF must be told where to find this system definition, and all
+   others it should be able to load.  This is [[https://common-lisp.net/project/asdf/asdf.html#Configuring-ASDF-to-find-your-systems][a complex topic]], but the
+   simplest approach is:
 
-  ASDF must be told where to find this system definition, and all
-  others it should be able to load.  This is [[https://common-lisp.net/project/asdf/asdf.html#Configuring-ASDF-to-find-your-systems][a complex topic]], but the
-  simplest approach is:
+   1. Use Quicklisp.
+   2. Make a symlink from [[http://blog.quicklisp.org/2018/01/the-quicklisp-local-projects-mechanism.html][Quicklisp’s =local-projects=]] directory, named
+      after your project, which points to your source tree.
 
-  1. Use Quicklisp.
-  2. Make a symlink from [[http://blog.quicklisp.org/2018/01/the-quicklisp-local-projects-mechanism.html][Quicklisp’s =local-projects=]] directory, named
-     after your project, which points to your source tree.
+   This is easily the grossest thing about this entire setup.
 
-  This is easily the grossest thing about this entire setup.
+   #+BEGIN_SRC shell :exports both
+     rm ~/quicklisp/local-projects/{hello,system-index.txt}
+     ln -sf $PWD/v3 ~/quicklisp/local-projects/hello
+   #+END_SRC
 
-  #+BEGIN_SRC shell
-    ln -sf $PWD/v3 ~/quicklisp/local-projects/hello
-  #+END_SRC
+   #+RESULTS:
 
-  The rest of the source is unchanged from v2.
+   The rest of the source is unchanged from v2.
 
-  #+BEGIN_SRC lisp :tangle v3/packages.lisp :noweb yes :export no
-    <<packages>>
-  #+END_SRC
+   #+BEGIN_SRC lisp :tangle v3/packages.lisp :noweb yes :export no
+     <<packages>>
+   #+END_SRC
 
-  #+BEGIN_SRC lisp :tangle v3/src/greet.lisp :noweb yes :mkdirp yes :export no
-    <<v2-greet>>
-  #+END_SRC
+   #+BEGIN_SRC lisp :tangle v3/src/greet.lisp :noweb yes :mkdirp yes :export no
+     <<v2-greet>>
+   #+END_SRC
 
-  #+BEGIN_SRC lisp :tangle v3/src/main.lisp :noweb yes :export no
-    <<v2-main>>
-  #+END_SRC
+   #+BEGIN_SRC lisp :tangle v3/src/main.lisp :noweb yes :export no
+     <<v2-main>>
+   #+END_SRC
 
-  Running works the same way:
+   Running works the same way:
 
-  #+BEGIN_SRC shell :dir v3 :results value verbatim :export both
-    sbcl --non-interactive --load build.lisp
-    ./hello World
-  #+END_SRC
+   #+BEGIN_SRC shell :dir v3 :results value verbatim :export both
+     sbcl --non-interactive --load build.lisp
+     ./hello World
+   #+END_SRC
 
-  #+RESULTS:
-  #+begin_example
-  This is SBCL 1.3.14.debian, an implementation of ANSI Common Lisp.
-  More information about SBCL is available at <http://www.sbcl.org/>.
+   #+RESULTS:
+   #+begin_example
+   This is SBCL 1.3.14.debian, an implementation of ANSI Common Lisp.
+   More information about SBCL is available at <http://www.sbcl.org/>.
 
-  SBCL is free software, provided as is, with absolutely no warranty.
-  It is mostly in the public domain; some portions are provided under
-  BSD-style licenses.  See the CREDITS and COPYING files in the
-  distribution for more information.
-  ; compiling file "/home/ieure/Dropbox/Projects/cl/hello/lit/v3/packages.lisp" (written 30 AUG 2018 09:03:51 AM):
-  ; compiling (DEFPACKAGE :HELLO ...)
-  ; compiling (IN-PACKAGE :HELLO)
+   SBCL is free software, provided as is, with absolutely no warranty.
+   It is mostly in the public domain; some portions are provided under
+   BSD-style licenses.  See the CREDITS and COPYING files in the
+   distribution for more information.
+   ; compiling file "/home/ieure/Dropbox/Projects/cl/lh/v3/packages.lisp" (written 03 SEP 2018 03:56:31 PM):
+   ; compiling (DEFPACKAGE :HELLO ...)
 
-  ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/hello/lit/v3/packages-tmpGHU3ALSV.fasl written
-  ; compilation finished in 0:00:00.002
-  ; compiling file "/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/greet.lisp" (written 30 AUG 2018 09:03:51 AM):
-  ; compiling (IN-PACKAGE :HELLO)
-  ; compiling (DEFUN GREET ...)
+   ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/lh/v3/packages-TMP.fasl written
+   ; compilation finished in 0:00:00.001
+   ; compiling file "/home/ieure/Dropbox/Projects/cl/lh/v3/src/greet.lisp" (written 03 SEP 2018 03:56:31 PM):
+   ; compiling (IN-PACKAGE :HELLO)
+   ; compiling (DEFUN GREET ...)
 
-  ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/greet-tmpAAURSO1.fasl written
-  ; compilation finished in 0:00:00.003
-  ; compiling file "/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/main.lisp" (written 30 AUG 2018 09:03:51 AM):
-  ; compiling (IN-PACKAGE :HELLO)
-  ; compiling (DEFUN MAIN ...)
+   ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/lh/v3/src/greet-TMP.fasl written
+   ; compilation finished in 0:00:00.002
+   ; compiling file "/home/ieure/Dropbox/Projects/cl/lh/v3/src/main.lisp" (written 03 SEP 2018 03:56:31 PM):
+   ; compiling (IN-PACKAGE :HELLO)
+   ; compiling (DEFUN MAIN ...)
 
-  ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/hello/lit/v3/src/main-tmp5GEXGEG5.fasl written
-  ; compilation finished in 0:00:00.001
-  [undoing binding stack and other enclosing state... done]
-  [defragmenting immobile space... done]
-  [saving current Lisp image into hello:
-  writing 4800 bytes from the read-only space at 0x20000000
-  writing 3216 bytes from the static space at 0x20100000
-  writing 1253376 bytes from the immobile space at 0x20300000
-  writing 13796832 bytes from the immobile space at 0x21b00000
-  writing 37715968 bytes from the dynamic space at 0x1000000000
-  done]
-  "Hello, World."
-#+end_example
+   ; /home/ieure/.cache/common-lisp/sbcl-1.3.14.debian-linux-x64/home/ieure/Dropbox/Projects/cl/lh/v3/src/main-TMP.fasl written
+   ; compilation finished in 0:00:00.001
+   [undoing binding stack and other enclosing state... done]
+   [defragmenting immobile space... done]
+   [saving current Lisp image into hello:
+   writing 4800 bytes from the read-only space at 0x20000000
+   writing 3216 bytes from the static space at 0x20100000
+   writing 1187840 bytes from the immobile space at 0x20300000
+   writing 13721392 bytes from the immobile space at 0x21b00000
+   writing 37093376 bytes from the dynamic space at 0x1000000000
+   done]
+   Hello, World.
+   #+end_example
+
 
 * V4: Using libraries
 
@@ -704,7 +715,8 @@
    Before this works, the Quicklisp =local-projects= symlink needs to
    be updated:
 
-   #+BEGIN_SRC shell :export code
+   #+BEGIN_SRC shell :export code :exports both
+     rm ~/quicklisp/local-projects/{hello,system-index.txt}
      ln -sf $PWD/v4 ~/quicklisp/local-projects/hello
    #+END_SRC
 
