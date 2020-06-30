@@ -121,8 +121,8 @@
   #+RESULTS:
   : 1
 
-  Just one, =/usr/bin/sbcl=.  Everything you can do with SBCL, you do
-  with this one program and environment it provides.
+  Just one, =/usr/bin/sbcl=.  Everything that can be done with SBCL is
+  done with this one binary and environment it provides.
 
 
 ** The Environment; Images
@@ -202,7 +202,7 @@
    into arguments for the toplevel function; they’re returned from
    =UIOP:COMMAND-LINE-ARGUMENTS=.
 
-   As you might expect, =UIOP:QUIT= function terminates the process.
+   As one might expect, =UIOP:QUIT= function terminates the process.
    Both these functions come from ASDF, which is covered a bit later.
 
 
@@ -241,8 +241,8 @@
        (:use :common-lisp))
    #+END_SRC
 
-   If you wanted to refer to symbols in other packages, you’d add them
-   to that list:
+   If you hypothetically wanted to refer to more packages, their
+   symbols would need to be added to that list:
 
    #+BEGIN_SRC lisp
      (defpackage :hello
@@ -251,8 +251,8 @@
 
    Note that loading and using a package *are completely separate
    operations*.  While many languages have an =import= mechanism which
-   both loads /and/ refers, Lisp doesn’t work this way; you have to
-   ensure that =:foo= and =:bar= have been loaded already.
+   both loads /and/ refers, Lisp doesn’t work this way; =:foo= and
+   =:bar= must have been loaded already.
 
    The last thing to cover is exported symbols.  When a symbol is
    exported, it may be referred to by other packages; the set of
@@ -288,7 +288,7 @@ v   #+NAME: packages
    explanation on why this is the case, I recommend [[http://www.gigamonkeys.com/book/programming-in-the-large-packages-and-symbols.html][the chapter on
    Packages and Symbols]] from [[http://www.gigamonkeys.com/book/][Programming in the Large]].  In the mean
    time, you’ll just have to trust that it’s right and I know what I’m
-   doing[fn:5].
+   doing[fn:1].
 
 
 ** Tying it All Together
@@ -341,7 +341,7 @@ v   #+NAME: packages
 
    The call to =SAVE-LISP-AND-DIE= *could* be put at the end of
    =hello.lisp= for this example, but it’s is a poor separation of
-   concerns for anything more complex than one-off scripts[fn:8].  Its
+   concerns for anything more complex than one-off scripts[fn:2].  Its
    rightful place is =build.lisp=.
 
    The complete build script is then:
@@ -508,7 +508,7 @@ v   #+NAME: packages
   Systems and packages are orthogonal, but since they both deal with
   some of the same parts of the project, it can get confusing.
 
-  A package is *a way of organizing the symbols of your project inside
+  A package is *a way of organizing the symbols of a project inside
   the Lisp environment*.  Lisp doesn’t have a convention for
   determining what package things belong to based on the path or
   filename.  One package can be split across multiple files, or one
@@ -603,7 +603,7 @@ v   #+NAME: packages
 
    1. Use Quicklisp.
    2. Make a symlink from [[http://blog.quicklisp.org/2018/01/the-quicklisp-local-projects-mechanism.html][Quicklisp’s =local-projects=]] directory, named
-      after your project, which points to your source tree.
+      after the project, which points to the source tree.
 
    This is easily the grossest thing about this entire setup.
 
@@ -686,9 +686,9 @@ v   #+NAME: packages
 
 ** Quicklisp
 
-   Quicklisp is not a package manager like you’d find in other
-   languages.  There’s no project-specific setup, like with virtualenv
-   or rbenv.  There’s no [[https://res.cloudinary.com/practicaldev/image/fetch/s--asKSgsVB--/c_imagga_scale,f_auto,fl_progressive,h_420,q_auto,w_1000/https://thepracticaldev.s3.amazonaws.com/i/9i6bs4g6cx05jeagfhum.png][=node_modules=]].
+   Quicklisp is not a package manager like other languages have.
+   There’s no project-specific setup, like with virtualenv or rbenv.
+   There’s no [[https://res.cloudinary.com/practicaldev/image/fetch/s--asKSgsVB--/c_imagga_scale,f_auto,fl_progressive,h_420,q_auto,w_1000/https://thepracticaldev.s3.amazonaws.com/i/9i6bs4g6cx05jeagfhum.png][=node_modules=]].
 
    Quicklisp is more of a caching mechanism than a package manager.
    Similar to Maven’s =~/.m2=, a single copy of the code is stored in
@@ -724,10 +724,12 @@ v   #+NAME: packages
    : ("unix-opts")
 
 
-** The New =MAIN=
+** Defining the Systems
 
-   The new system definition looks the same as before, except a line
-   has been added to ensure that unix-opts is loaded:
+   The only change to the system definitions is adding =:unix-opts= to
+   the =:depends-on= form.  *Note that this refers to the /system/,
+   not the package*.  Systems /provide/ packages, and /depend on/
+   other systems.
 
    #+BEGIN_SRC lisp :tangle v4/hello.asd :noweb yes :export no
      <<defsystem-hello>>
@@ -739,13 +741,10 @@ v   #+NAME: packages
    #+END_SRC
 
 
-   Because =:hello/bin= depends on unix-opts, and =main.lisp= is part
-   of that system, it can use the library.  Note that the /package/
-   definition hasn’t changed to =USE= unix-opts.  =USE=ing a package
-   puts its exported symbols into the current package, but exported
-   symbols from any loaded package can always be referred to by
-   prefixing them with the package name and a colon,
-   ex. =unix-opts:get-opts=.
+** The New =MAIN=
+
+   With the =:unix-opts= system loaded, the =:unix-opts= package is
+   available for =MAIN= to use:
 
    #+BEGIN_SRC lisp :tangle v4/src/main.lisp
      (in-package :hello)
@@ -784,8 +783,8 @@ v   #+NAME: packages
    <<v2-greet>>
    #+END_SRC
 
-   Before this works, the Quicklisp =local-projects= symlink needs to
-   be updated:
+   Before this can work, the Quicklisp =local-projects= symlink needs
+   to be updated to point here instead of to the old version:
 
    #+BEGIN_SRC shell :export code :exports both
      rm ~/quicklisp/local-projects/{hello,system-index.txt}
@@ -828,9 +827,9 @@ v   #+NAME: packages
 
 * Conclusion
 
-  At over four thousand words, this has been *a lot more* than I set
-  out to write.  The process of learning, organizing, and refining my
-  own understanding has been wonderful.  I hope you’ve been able to
+  At over four thousand words, this piece has been *a lot more* than I
+  set out to write.  The process of learning, organizing, and refining
+  my own understanding has been wonderful.  I hope you’ve been able to
   take away some of that, and will go forth with useful new tools.
 
 
@@ -842,27 +841,8 @@ v   #+NAME: packages
 
 * Footnotes
 
-[fn:1] It is *absolutely* possible to wreck the Lisp environment if
-your’re not careful, so this is a good thing.  For example, if you
-eval:
+[fn:1] I have absolutely no idea what I’m doing.
 
-#+BEGIN_SRC lisp :tangle no
-  (in-package :common-lisp)
-  (fmakunbound 'defun)
-#+END_SRC
-
-It will remove the function binding from the =DEFUN= symbol, with the
-upshot that you can’t define new functions.  Oops.
-
-[fn:5] I have absolutely no idea what I’m doing.
-
-[fn:6] You can still refer to them by qualifying with the package:
-=(common-lisp:defun () …)=
-
-[fn:7] The =SB-EXT:= prefix specifies the package the function lives
-in.  =SB-EXT= is a package which contains SBCL-specific extensions
-which aren’t part of [[https://www.cs.cmu.edu/Groups/AI/util/html/cltl/cltl2.html][the Common Lisp language specification]].
-
-[fn:8] If =SAVE-LISP-AND-DIE= was in =hello.lisp=, and that file was
+[fn:2] If =SAVE-LISP-AND-DIE= was in =hello.lisp=, and that file was
 loaded into any Lisp environment, it would immediately terminate,
 which is unacceptably antisocial behavior.
