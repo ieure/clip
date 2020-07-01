@@ -14,6 +14,6 @@
         (unix-opts:describe
          :prefix "A Hello World program."
          :args "WHOM")
-        (write-line (greet (car free-args)))))
+        (write-line (greet (first free-args)))))
 
   (uiop:quit))

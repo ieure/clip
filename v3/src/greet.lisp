@@ -1,5 +1,4 @@
-(in-package :hello)                     ; We have to tell Lisp what
-                                        ; package this is in now.
+(in-package :hello)
 
 ;; Unchanged from v1
 (defun greet (whom)

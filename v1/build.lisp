@@ -1,8 +1,5 @@
-(load "hello.lisp")                     ; Load the code into the Lisp
-                                        ; environment
+(load "hello.lisp")
 
-(sb-ext:save-lisp-and-die "hello"       ; Save a Lisp image
- :toplevel 'hello:main                  ; The toplevel function is
-                                        ; MAIN, inside the HELLO
-                                        ; package.
- :executable t)                         ; Make an executable.
+(sb-ext:save-lisp-and-die "hello"
+ :toplevel 'hello:main
+ :executable t)

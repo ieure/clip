@@ -1,12 +1,8 @@
-(defpackage :hello                      ; Define a package and name it HELLO
-  (:use :common-lisp)                   ; The package needs Common Lisp
-  (:export :greet :main))               ; This package has two public
-                                        ; symbols, GREET and MAIN.
+(defpackage :hello
+  (:use :common-lisp)
+  (:export :greet :main))
 
-
-(in-package :hello)                     ; DEFPACKAGE only defines the
-                                        ; package, it doesn't make it
-                                        ; active.
+(in-package :hello)
 
 (defun greet (whom)
   "Create a greeting message for WHOM."
@@ -14,6 +10,6 @@
 
 (defun main ()
   "Greet someone, or something."
-  (write-line (greet (car (uiop:command-line-arguments))))
+  (write-line (greet (first (uiop:command-line-arguments))))
 
   (uiop:quit))

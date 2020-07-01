@@ -3,6 +3,6 @@
 ;; Unchanged from v1
 (defun main ()
   "Greet someone, or something."
-  (write-line (greet (car (uiop:command-line-arguments))))
+  (write-line (greet (first (uiop:command-line-arguments))))
 
   (uiop:quit))
