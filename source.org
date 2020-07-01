@@ -200,7 +200,7 @@
    #+BEGIN_SRC lisp :exports code :results value verbatim
      (defun main ()
        "Greet someone, or something."
-       (write-line (greet (car (uiop:command-line-arguments))))
+       (write-line (greet (first (uiop:command-line-arguments))))
 
        (uiop:quit))
    #+END_SRC
@@ -230,8 +230,8 @@
 
    In Common Lisp, *a package is a namespace* which contains symbols.
    The symbols can be defined in the package, like =MAIN= and =GREET=,
-   or they can refer to symbols in other packages, like =DEFUN= and
-   =FORMAT= (which both come from the =COMMON-LISP= package).
+   or they can be symbols inherited from other packages, like =DEFUN=
+   and =FORMAT= (which both come from the =COMMON-LISP= package[fn:5]).
 
    The Hello World example should define a package, called =HELLO=.
 
@@ -267,18 +267,18 @@
 
    In Lisp, newly-created packages are /completely empty/, and don’t
    even include core language functionality like =DEFUN=.  Those
-   symbols can still be referred to by qualifying them with the
-   package name, but in most cases, it’s desirable to use them
-   directly.  Adding a =(:use …)= form inside =DEFPACKAGE= will copy
-   other packages’ exported symbols into the package being defined:
+   symbols can be used to by qualifying them with the package name,
+   but in most cases, it’s desirable to use them directly.  Adding a
+   =(:use …)= form inside =DEFPACKAGE= will copy other packages’
+   exported symbols into the package being defined:
 
    #+BEGIN_SRC lisp :tangle no :exports code
      (defpackage :hello
        (:use :common-lisp))
    #+END_SRC
 
-   If you hypothetically wanted to refer to more packages, their
-   symbols would need to be added to that list:
+   If you hypothetically wanted to use to more packages, their symbols
+   would need to be added to that list:
 
    #+BEGIN_SRC lisp
      (defpackage :hello
@@ -288,16 +288,16 @@
    In the same way that defining and using a package are separate,
    *loading and using a package are also completely separate
    operations*.  While many languages have an =import= mechanism which
-   both loads /and/ refers, Lisp doesn’t work this way; =:foo= and
+   both loads /and/ uses, Lisp doesn’t work this way; =:foo= and
    =:bar= must have been loaded already.
 
 
 *** Exports
 
     The last package-related topic to cover is exported symbols.  When
-    a symbol is exported, it may be referred to by other packages; the
-    set of exported symbols comprises the public API of a package.
-    Non-exported symbols are only usable within the same package.
+    a symbol is exported, it may be used by packages; the set of
+    exported symbols comprises the public API of a package.
+    Non-exported symbols should only be used within the same package.
 
     Many languages specify visibility symbol-by-symbol, at the point
     of definition:
@@ -413,7 +413,7 @@
    Running it shows the message:
 
    #+NAME: run-hello-world
-   #+BEGIN_SRC shell :dir v1 :exports both :results value verbatim
+   #+BEGIN_SRC shell :dir v1 :exports both :results verbatim
      ./hello World
    #+END_SRC
 
@@ -538,22 +538,19 @@
   Quicklisp.
 
   Systems and packages are orthogonal, but since they both deal with
-  some of the same parts of the project, and the names oftne overlap,
+  some of the same parts of the project, and the names often overlap,
   it can get confusing.
 
   A package is *a way of organizing the symbols of a project inside
   the Lisp environment*.  Lisp doesn’t have a convention for
   determining what package things belong to based on the path or
   filename.  One package can be split across multiple files, or one
-  file can contain multiple packages.  *Packages are not atomic*.
-  It’s possible to load a subset of the files in a package.  All of
-  this means the list of files loaded into the Lisp environment and
-  their order is significant.
+  file can contain multiple packages.
 
   A system is *a description of /how/ to load /part/ of a project into
   the environment*.  A system can load multiple packages, or it can
-  load different parts of one package.  Systems encapsulate the list
-  and order of files needed to produce a usable package.
+  load a subset of one package.  Systems encapsulate the list and
+  order of files needed to produce a usable package.
 
   Further complicating things, *one project can have multiple
   systems*.  A system is a view into /part/ of a project, and
@@ -566,9 +563,12 @@
 
 ** Defining the System
 
-   Systems are defined in an =.asd= file, using the =DEFSYSTEM= form.
-   For the Hello World project, two systems are needed: one for the
-   core, and one for the CLI.
+   Systems are defined in an =.asd= file, using [[https://common-lisp.net/project/asdf/asdf/The-defsystem-form.html][the =DEFSYSTEM= form]].
+   To maintain good separation of concerns, the Hello World project
+   needs two systems: one for the core, and one for the CLI.  For
+   these examples, I’ll be using the CLI system to demonstrate.  If
+   someone wanted to reuse the core =GREET= code in their own program[fn:4],
+   they’d use that system.
 
    #+BEGIN_SRC lisp :exports code
      (defsystem :hello)
@@ -589,9 +589,9 @@
    #+NAME: defsystem-hello
    #+BEGIN_SRC lisp :exports code
      (defsystem :hello
-       :serial t
        :components ((:file "packages")
                     (:module "src"
+                             :serial t
                              :components ((:file "greet")))))
 
    #+END_SRC
@@ -692,7 +692,7 @@
    #+end_example
 
 
-* V4: Using Libraries
+* Version 4: Using Libraries
 
   The final step is to replace UIOP’s basic program arguments with a
   more full-featured library, [[https://github.com/libre-man/unix-opts][unix-opts.]]
@@ -725,9 +725,8 @@
    Quicklisp has =QL:SYSTEM-APROPOS=, which searches available
    libraries:
 
-   #+BEGIN_SRC lisp :results value verbatim :exports both
-     (with-output-to-string (*standard-output*)
-       (ql:system-apropos "unix"))
+   #+BEGIN_SRC lisp :results output verbatim :exports both
+     (ql:system-apropos "unix")
    #+END_SRC
 
    #+RESULTS:
@@ -736,10 +735,6 @@
    : #<SYSTEM unix-options / unix-options-20151031-git / quicklisp 2020-06-10>
    : #<SYSTEM unix-opts / unix-opts-20200610-git / quicklisp 2020-06-10>
    : #<SYSTEM unix-opts/tests / unix-opts-20200610-git / quicklisp 2020-06-10>
-
-   (=QL:SYSTEM-APROPOS= /prints/ matching values;
-   =WITH-OUTPUT-TO-STRING= captures what’s printed so it’s visible in
-   these examples.)
 
    Installing is done with =QL:QUICKLOAD=.  This downloads the library
    (if necessary) and loads its system:
@@ -791,7 +786,7 @@
              (unix-opts:describe
               :prefix "A Hello World program."
               :args "WHOM")
-             (write-line (greet (car free-args)))))
+             (write-line (greet (first free-args)))))
 
        (uiop:quit))
    #+END_SRC
@@ -960,3 +955,10 @@ you’ll just have to trust that it’s right and I know what I’m
 doing[fn:3].
 
 [fn:3] I have absolutely no idea what I’m doing.
+
+[fn:4] For example, to have their program greet the user when it
+starts, or to create a massively multiplayer online Hello World
+(MMOHW).
+
+[fn:5] =:CL= is an alias for the =:COMMON-LISP= package, so =(:use
+:cl)= is a common equivalent.
