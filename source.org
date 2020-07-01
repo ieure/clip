@@ -376,7 +376,7 @@
    The complete build script goes into =build.lisp= and looks like:
 
    #+NAME: build-lisp
-   #+BEGIN_SRC lisp :tangle v1/build.lisp :noweb yes :exports code
+   #+BEGIN_SRC lisp :tangle v1/build.lisp :mkdirp yes :noweb yes :exports code
      <<load-hello>>
 
      <<make-executable>>
@@ -457,7 +457,7 @@
 
   The package definition is identical to v1, but moved into =packages.lisp=:
 
-  #+BEGIN_SRC lisp :tangle v2/packages.lisp :noweb yes :exports code
+  #+BEGIN_SRC lisp :tangle v2/packages.lisp :mkdirp yes :noweb yes :exports code
     <<packages>>
   #+END_SRC
 
@@ -476,7 +476,7 @@
   package it’s in:
 
   #+NAME: v2-main
-  #+BEGIN_SRC lisp :tangle v2/src/main.lisp :noweb yes
+  #+BEGIN_SRC lisp :tangle v2/src/main.lisp :mkdirp yes :noweb yes
     <<in-package-hello>>
 
     ;; Unchanged from v1
@@ -623,7 +623,7 @@
    doesn’t need to replicate that anymore; it can lean on ASDF instead:
 
    #+NAME: build-v3
-   #+BEGIN_SRC lisp :tangle v3/build.lisp
+   #+BEGIN_SRC lisp :tangle v3/build.lisp :mkdirp yes 
      (asdf:load-system :hello/bin)
 
      (sb-ext:save-lisp-and-die "hello"
@@ -650,7 +650,7 @@
 
    The rest of the source is unchanged from v2.
 
-   #+BEGIN_SRC lisp :tangle v3/packages.lisp :noweb yes :exports none
+   #+BEGIN_SRC lisp :tangle v3/packages.lisp :mkdirp yes :noweb yes :exports none
      <<packages>>
    #+END_SRC
 
@@ -658,7 +658,7 @@
      <<v2-greet>>
    #+END_SRC
 
-   #+BEGIN_SRC lisp :tangle v3/src/main.lisp :noweb yes :exports none
+   #+BEGIN_SRC lisp :tangle v3/src/main.lisp :mkdirp yes :noweb yes :exports none
      <<v2-main>>
    #+END_SRC
 
@@ -754,7 +754,7 @@
    not the package*.  Systems /provide/ packages, and /depend on/
    other systems.
 
-   #+BEGIN_SRC lisp :tangle v4/hello.asd :noweb yes :exports none
+   #+BEGIN_SRC lisp :tangle v4/hello.asd :mkdirp yes :noweb yes :exports none
      <<defsystem-hello>>
 
      (defsystem :hello/bin
@@ -769,7 +769,7 @@
    With the =:unix-opts= system loaded, the =:unix-opts= package is
    available for =MAIN= to use:
 
-   #+BEGIN_SRC lisp :tangle v4/src/main.lisp
+   #+BEGIN_SRC lisp :tangle v4/src/main.lisp :mkdirp yes
      (in-package :hello)
 
      (unix-opts:define-opts
@@ -793,7 +793,7 @@
 
    Nothing needs to change in any of the other source files.
 
-   #+BEGIN_SRC lisp :tangle v4/packages.lisp :noweb yes :exports none
+   #+BEGIN_SRC lisp :tangle v4/packages.lisp :mkdirp yes :noweb yes :exports none
      <<packages>>
    #+END_SRC
 
