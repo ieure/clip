@@ -278,7 +278,7 @@
    #+END_SRC
 
    If you hypothetically wanted to use to more packages, their symbols
-   would need to be added after `:common-lisp`[fn:5].  Note that this
+   would need to be added after =:common-lisp=[fn:4].  Note that this
    should be used with care, since updates to those packages could
    collide with the symbols in =:hello=.
 
@@ -564,7 +564,7 @@
    To maintain good separation of concerns, the Hello World project
    needs two systems: one for the core, and one for the CLI.  For
    these examples, I’ll be using the CLI system to demonstrate.  If
-   someone wanted to reuse the core =GREET= code in their own program[fn:6],
+   someone wanted to reuse the core =GREET= code in their own program[fn:5],
    they’d use that system.
 
    #+BEGIN_SRC lisp :exports code
@@ -943,13 +943,11 @@
 explanation on why this is the case, I recommend [[http://www.gigamonkeys.com/book/programming-in-the-large-packages-and-symbols.html][the chapter on
 Packages and Symbols]] from [[http://www.gigamonkeys.com/book/][Programming in the Large]].  In the mean time,
 you’ll just have to trust that it’s right and I know what I’m
-doing[fn:4].
+doing.
 
-[fn:4] I have absolutely no idea what I’m doing.
-
-[fn:5] =:cl= is an alias for =:common-lisp=, so it’s common to see
+[fn:4] =:cl= is an alias for =:common-lisp=, so it’s common to see
 that in code in the wild.
 
-[fn:6] For example, to have their program greet the user when it
+[fn:5] For example, to have their program greet the user when it
 starts, or to create a massively multiplayer online Hello World
 (MMOHW).
