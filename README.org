@@ -1,11 +1,11 @@
-# Created 2020-07-06 Mon 19:23
+# Created 2020-07-06 Mon 20:13
 #+OPTIONS: num:nil p:nil
 #+TITLE: Common Lisp in Practice
 #+AUTHOR: Ian Eure <ian@retrospec.tv>
 
 * Introduction
   :PROPERTIES:
-  :ID:       2ae38d29-6e83-46e1-8c36-e5a8036f803d
+  :ID:       c615e50c-5101-4e41-8fc9-45ef29eeb43a
   :END:
 
 One of the things which has kept Common Lisp out of my day-to-day
@@ -28,7 +28,7 @@ proofreading and aiding my understanding where it lacked.
 
 * Goals
   :PROPERTIES:
-  :ID:       dd476ac2-5f58-4fc3-9c6b-a85d12c4586c
+  :ID:       2e1e0df8-5d67-476c-bceb-a203d9d4e67a
   :END:
 
 The overarching goal is to explain how to put together a Common
@@ -47,7 +47,7 @@ libraries.
 
 * Running the Examples
   :PROPERTIES:
-  :ID:       82efe532-4ac0-48c2-a40d-8b72d1cd1714
+  :ID:       28ff9746-0d0b-4ff2-b69c-eaaf11c79805
   :END:
 
 If you’d like to run the example code, you’ll need to install [[http://www.sbcl.org/][Steel
@@ -64,7 +64,7 @@ extracted from it]] are available in [[https://github.com/ieure/clip/tree/master
 
 * Background
   :PROPERTIES:
-  :ID:       26f8e0c3-1733-4043-9b37-107cdf6e59b1
+  :ID:       6f8aafb5-41c7-4913-a3e6-846e23c9e3d6
   :END:
 
 A typical compiler is a standalone executable which runs one OS
@@ -156,7 +156,7 @@ done inside of the environment it provides.
 
 ** The Environment; Images
    :PROPERTIES:
-   :ID:       c3e4fc11-814c-49d5-b84f-13394f7f6a93
+   :ID:       e85d69bc-4749-4b92-91db-a6ffa5245cee
    :END:
 
 When Common Lisp starts, it initializes a *Lisp environment* in the
@@ -180,7 +180,7 @@ state, with the toplevel set to the desired entry point.
 
 * Version 1: Quick & Dirty
   :PROPERTIES:
-  :ID:       8debdd5d-082c-4dc2-a0b9-55fa3b43b29e
+  :ID:       d02c988c-2f89-4503-a40a-94040945d84d
   :END:
 
 With all that out of the way, it’s time to make a traditional
@@ -211,7 +211,7 @@ Trying this in the REPL shows that it works:
 
 ** The Toplevel Function
    :PROPERTIES:
-   :ID:       63736e5b-6101-4448-8ef2-04b495d51cab
+   :ID:       a8484f23-fb99-466b-9279-9a5b5a6b76f3
    :END:
 
 To satisfy the first requirement, a toplevel function is needed —
@@ -246,7 +246,7 @@ and between implementations.
 
 ** Packages
    :PROPERTIES:
-   :ID:       03b26627-3cc1-4e47-a600-0344d641a666
+   :ID:       c1f5614a-6c86-4590-8497-3d61c076ec79
    :END:
 
 The next thing to get a handle on is packages.  This terminology is
@@ -283,7 +283,7 @@ While the code is similar, the semantics are different.  This
 doesn’t exist.  Creating the package is an explicit step which must
 be done first.
 
-[[Http://www.lispworks.com/documentation/HyperSpec/Body/m_defpkg.htm][The =DEFPACKAGE= macro]] creates a package.  It takes a symbol naming
+[[http://www.lispworks.com/documentation/HyperSpec/Body/m_defpkg.htm][The =DEFPACKAGE= macro]] creates a package.  It takes a symbol naming
 it:
 
 #+name: packages-bare
@@ -304,7 +304,7 @@ exported symbols into the package being defined:
 #+end_src
 
 If you hypothetically wanted to use to more packages, their symbols
-would need to be added after `:common-lisp`[fn:5].  Note that this
+would need to be added after =:common-lisp=[fn:4].  Note that this
 should be used with care, since updates to those packages could
 collide with the symbols in =:hello=.
 
@@ -322,15 +322,15 @@ both loads /and/ uses, Lisp doesn’t work this way; =:foo= and
 explanation on why this is the case, I recommend [[http://www.gigamonkeys.com/book/programming-in-the-large-packages-and-symbols.html][the chapter on
 Packages and Symbols]] from [[http://www.gigamonkeys.com/book/][Programming in the Large]].  In the mean time,
 you’ll just have to trust that it’s right and I know what I’m
-doing[fn:4].
+doing.
 
-[fn:5] =:cl= is an alias for =:common-lisp=, so it’s common to see
+[fn:4] =:cl= is an alias for =:common-lisp=, so it’s common to see
 that in code in the wild.
 
 
 *** Exports
     :PROPERTIES:
-    :ID:       4c32fb75-f28e-494b-80c4-b5e36a0190d3
+    :ID:       07bc4017-4a6c-4708-a814-b90b4e09882a
     :END:
 
 The last package-related topic to cover is exported symbols.  When
@@ -358,7 +358,7 @@ is defined, using the =(:export …)= form:
 
 ** Tying it All Together
    :PROPERTIES:
-   :ID:       90fda8ca-9f3e-4fd5-9d1e-61465035f571
+   :ID:       f0c29ebe-29f5-4dd6-8eff-31c186564b2c
    :END:
 
 The complete source for Hello World now looks like this:
@@ -385,7 +385,7 @@ The complete source for Hello World now looks like this:
 
 ** Building an Image
    :PROPERTIES:
-   :ID:       9e821052-fd59-424e-9358-197d5c85cb26
+   :ID:       45058667-e3ed-4a9e-b7d5-0829240109ca
    :END:
 
 Because the Common Lisp toolchain exists inside the Lisp
@@ -486,7 +486,7 @@ how, it’s time to tear it down and rebuild it a few times.
 
 * Version 2: Package Structure
   :PROPERTIES:
-  :ID:       d584823d-4708-4d69-9ae0-2f951af47ea3
+  :ID:       9a2c28e6-c099-4c25-a62b-b24ba17f52ef
   :END:
 
 Having all the code in one file is fine for a toy, but larger
@@ -594,7 +594,7 @@ Building and running works the same way:
 
 * Version 3: Systems
   :PROPERTIES:
-  :ID:       c18795dc-d522-48d2-a5f3-6111170bd4fb
+  :ID:       cef731d2-6e5d-4636-89a6-58d0483a51b2
   :END:
 
 The next yak in the recursive shave is *systems*.  Packages [[https://www.cs.cmu.edu/Groups/AI/util/html/cltl/clm/node111.html#XPACK][are part
@@ -630,14 +630,14 @@ allows these different usecases to be supported gracefully.
 
 ** Defining the System
    :PROPERTIES:
-   :ID:       e98fdfc7-61d0-4773-b55e-1ddcbb5f20a4
+   :ID:       e1883120-d8ea-462e-85f7-6614cc9bec04
    :END:
 
 Systems are defined in an =.asd= file, using [[https://common-lisp.net/project/asdf/asdf/The-defsystem-form.html][the =DEFSYSTEM= form]].
 To maintain good separation of concerns, the Hello World project
 needs two systems: one for the core, and one for the CLI.  For
 these examples, I’ll be using the CLI system to demonstrate.  If
-someone wanted to reuse the core =GREET= code in their own program[fn:6],
+someone wanted to reuse the core =GREET= code in their own program[fn:5],
 they’d use that system.
 
 #+begin_src lisp
@@ -748,10 +748,10 @@ Running works the same way:
     Load 1 ASDF system:
       hello/bin
   ; Loading "hello/bin"
-  [package hello]
+
   [undoing binding stack and other enclosing state... done]
   [performing final GC... done]
-  [defragmenting immobile space... (fin,inst,fdefn,code,sym)=1024+925+18993+19799+25599... done]
+  [defragmenting immobile space... (fin,inst,fdefn,code,sym)=1024+925+18993+19799+25597... done]
   [saving current Lisp image into hello:
   writing 0 bytes from the read-only space at 0x50000000
   writing 432 bytes from the static space at 0x50100000
@@ -762,14 +762,14 @@ Running works the same way:
   Hello, World.
 #+end_example
 
-[fn:6] For example, to have their program greet the user when it
+[fn:5] For example, to have their program greet the user when it
 starts, or to create a massively multiplayer online Hello World
 (MMOHW).
 
 
 * Version 4: Using Libraries
   :PROPERTIES:
-  :ID:       59d69fb5-464b-4d80-8470-54a38ef8b107
+  :ID:       ef05a3a0-9f78-453f-aaea-211162b186a4
   :END:
 
 The final step is to replace UIOP’s basic program arguments with a
@@ -782,7 +782,7 @@ library is done from the REPL.
 
 ** Quicklisp
    :PROPERTIES:
-   :ID:       0c613b7c-3049-4460-ba5f-5bdf75cc1ce2
+   :ID:       1f41f38b-9d32-4b10-9b1c-5b6b54e384e6
    :END:
 
 Quicklisp is not a package manager like other languages have.
@@ -800,7 +800,7 @@ Lisp environment.
 
 ** Installing unix-opts
    :PROPERTIES:
-   :ID:       079b18e8-fa2e-415b-95d5-1e26bd507ffc
+   :ID:       88da6759-0fef-4e1a-b284-fbe035853e29
    :END:
 
 The [[https://www.quicklisp.org/beta/][Quicklisp documentation]] discusses this, but I’m going to cover
@@ -831,7 +831,7 @@ Installing is done with =QL:QUICKLOAD=.  This downloads the library
 
 ** Defining the Systems
    :PROPERTIES:
-   :ID:       8156745b-bfb4-4e5b-8672-631dcfe67b8e
+   :ID:       0872ec61-7803-4db5-b452-aff4e2d85cbd
    :END:
 
 The only change to the system definitions is adding =:unix-opts= to
@@ -843,7 +843,7 @@ the system, it’ll notice if =unix-opts= (or any other system in
 
 ** The New =MAIN=
    :PROPERTIES:
-   :ID:       5914c701-14dd-4990-8afa-be5d19f860b7
+   :ID:       ef394b10-3876-4938-8849-30fd2a9b75ac
    :END:
 
 With the =:unix-opts= system loaded, the =:unix-opts= package is
@@ -875,7 +875,7 @@ Nothing needs to change in any of the other source files.
 
 ** Building
    :PROPERTIES:
-   :ID:       e1c383b9-16fc-4fe3-8757-d5db0dd471c3
+   :ID:       d979f181-4814-43c3-93fb-cdd929f26b5a
    :END:
 
 For this to work, the Quicklisp =local-projects= symlink created in
@@ -944,7 +944,7 @@ options parser is working:
 
 * Conclusion
   :PROPERTIES:
-  :ID:       80fc3bcb-a8c8-4d94-a668-9dbf46e1e385
+  :ID:       91844775-2a83-4b85-b755-a48e3148c2b4
   :END:
 
 At over four thousand words, this piece has been *a lot more* than I
@@ -955,7 +955,7 @@ take away some of that, and will go forth with useful new tools.
 
 * Further reading
   :PROPERTIES:
-  :ID:       c5f779c1-cf29-444e-bc2e-fc15b50fb270
+  :ID:       3dbca0ca-cf82-455d-b314-ba5e61f2f4ec
   :END:
 
 - [[http://stevelosh.com/blog/2018/08/a-road-to-common-lisp/][A Road to Common Lisp]]
