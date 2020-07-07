@@ -257,7 +257,7 @@
    doesn’t exist.  Creating the package is an explicit step which must
    be done first.
 
-   [[Http://www.lispworks.com/documentation/HyperSpec/Body/m_defpkg.htm][The =DEFPACKAGE= macro]] creates a package.  It takes a symbol naming
+   [[http://www.lispworks.com/documentation/HyperSpec/Body/m_defpkg.htm][The =DEFPACKAGE= macro]] creates a package.  It takes a symbol naming
    it:
 
    #+NAME: packages-bare
@@ -620,7 +620,7 @@
    and ASDF instead:
 
    #+NAME: build-v3
-   #+BEGIN_SRC lisp :tangle v3/build.lisp :mkdirp yes 
+   #+BEGIN_SRC lisp :tangle v3/build.lisp :mkdirp yes
      (ql:quickload :hello/bin)
 
      (sb-ext:save-lisp-and-die "hello"
@@ -907,7 +907,7 @@
    : A Hello World program.
    : Available options:
    :   -h, --help Print this help text
-   : 
+   :
 
    #+BEGIN_SRC shell :dir v4 :results value verbatim :exports both
      ./hello $(whoami)
