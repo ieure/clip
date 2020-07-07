@@ -231,7 +231,7 @@
    In Common Lisp, *a package is a namespace* which contains symbols.
    The symbols can be defined in the package, like =MAIN= and =GREET=,
    or they can be symbols inherited from other packages, like =DEFUN=
-   and =FORMAT= (which both come from the =COMMON-LISP= package[fn:5]).
+   and =FORMAT= (which both come from the =COMMON-LISP= package[fn:2]).
 
    The Hello World example should define a package, called =HELLO=.
 
@@ -253,7 +253,7 @@
    #+END_SRC
 
    While the code is similar, the semantics are different.  This
-   /only/ sets the active package, it won’t create =:hello=[fn:2] if it
+   /only/ sets the active package, it won’t create =:hello=[fn:3] if it
    doesn’t exist.  Creating the package is an explicit step which must
    be done first.
 
@@ -278,12 +278,9 @@
    #+END_SRC
 
    If you hypothetically wanted to use to more packages, their symbols
-   would need to be added to that list:
-
-   #+BEGIN_SRC lisp
-     (defpackage :hello
-       (:use :common-lisp :foo :bar))
-   #+END_SRC
+   would need to be added after `:common-lisp`[fn:5].  Note that this
+   should be used with care, since updates to those packages could
+   collide with the symbols in =:hello=.
 
    In the same way that defining and using a package are separate,
    *loading and using a package are also completely separate
@@ -567,7 +564,7 @@
    To maintain good separation of concerns, the Hello World project
    needs two systems: one for the core, and one for the CLI.  For
    these examples, I’ll be using the CLI system to demonstrate.  If
-   someone wanted to reuse the core =GREET= code in their own program[fn:4],
+   someone wanted to reuse the core =GREET= code in their own program[fn:6],
    they’d use that system.
 
    #+BEGIN_SRC lisp :exports code
@@ -618,13 +615,13 @@
      <<defsystem-main>>
    #+END_SRC
 
-
    Since the system defines the files and load order, the build script
-   doesn’t need to replicate that anymore; it can lean on ASDF instead:
+   doesn’t need to replicate that anymore; it can lean on Quicklisp
+   and ASDF instead:
 
    #+NAME: build-v3
    #+BEGIN_SRC lisp :tangle v3/build.lisp :mkdirp yes 
-     (asdf:load-system :hello/bin)
+     (ql:quickload :hello/bin)
 
      (sb-ext:save-lisp-and-die "hello"
       :toplevel 'hello:main
@@ -752,7 +749,9 @@
    The only change to the system definitions is adding =:unix-opts= to
    the =:depends-on= form.  *Note that this refers to the /system/,
    not the package*.  Systems /provide/ packages, and /depend on/
-   other systems.
+   other systems.  Because =build.lisp= uses =QL:QUICKLOAD= to load
+   the system, it’ll notice if =unix-opts= (or any other system in
+   =:depends-on=) hasn’t been installed, and do that automatically.
 
    #+BEGIN_SRC lisp :tangle v4/hello.asd :mkdirp yes :noweb yes :exports none
      <<defsystem-hello>>
@@ -802,18 +801,7 @@
    #+END_SRC
 
 
-** Build Script
-
-   To make things easier, the Quicklisp invocation should be added to
-   =build.lisp=:
-
-   #+BEGIN_SRC lisp :tangle v4/build.lisp :noweb yes :mkdirp yes :exports code
-     (ql:quickload "unix-opts")
-
-     <<build-v3>>
-   #+END_SRC
-
-   This ensures that the =unix-opts= library is installed and loaded.
+** Building
 
    For this to work, the Quicklisp =local-projects= symlink created in
    v3 needs to be updated to point here instead:
@@ -947,18 +935,21 @@
 
 [fn:1] SBCL refers to them as "cores."
 
-[fn:2] You may note that I’ve written the name of the package as
+[fn:2] =:CL= is an alias for the =:COMMON-LISP= package, so =(:use
+:cl)= is a common equivalent.
+
+[fn:3] You may note that I’ve written the name of the package as
 =HELLO= (which it is), but it’s in the code as =:hello=.  For a deeper
 explanation on why this is the case, I recommend [[http://www.gigamonkeys.com/book/programming-in-the-large-packages-and-symbols.html][the chapter on
 Packages and Symbols]] from [[http://www.gigamonkeys.com/book/][Programming in the Large]].  In the mean time,
 you’ll just have to trust that it’s right and I know what I’m
-doing[fn:3].
+doing[fn:4].
 
-[fn:3] I have absolutely no idea what I’m doing.
+[fn:4] I have absolutely no idea what I’m doing.
 
-[fn:4] For example, to have their program greet the user when it
+[fn:5] =:cl= is an alias for =:common-lisp=, so it’s common to see
+that in code in the wild.
+
+[fn:6] For example, to have their program greet the user when it
 starts, or to create a massively multiplayer online Hello World
 (MMOHW).
-
-[fn:5] =:CL= is an alias for the =:COMMON-LISP= package, so =(:use
-:cl)= is a common equivalent.

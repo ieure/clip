@@ -1,4 +1,4 @@
-(asdf:load-system :hello/bin)
+(ql:quickload :hello/bin)
 
 (sb-ext:save-lisp-and-die "hello"
  :toplevel 'hello:main
