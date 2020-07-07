@@ -1,0 +1,6 @@
+* Common Lisp in Practice
+  :PROPERTIES:
+  :ID:       316b5516-2991-4c05-9663-651d3c3b1626
+  :END:
+
+  This is the source repo for my article [[file:clip.org][Common Lisp in Practice]].
